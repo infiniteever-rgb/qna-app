@@ -22,14 +22,22 @@
         <input type="text" id="runnerName" placeholder="Your Name">
         <p>Select Your Position:</p>
         <select id="zoneSelect">
-            <option value="row1_mid">L3 - Center (Top)</option>
-            <option value="row2_mid">L2 - Center</option>
-            <option value="row2_left">L2 - Left</option>
-            <option value="row2_right">L2 - Right</option>
-            <option value="row3_left">Floor - Mid Left</option>
-            <option value="row3_right">Floor - Mid Right</option>
-            <option value="row4_left">Floor - Extreme Left</option>
-            <option value="row4_right">Floor - Extreme Right</option>
+            <optgroup label="Top Row">
+                <option value="row1_left">Circle 2 - Center</option>
+                <option value="row1_right">Circle 1 - Mid</option>
+            </optgroup>
+            <optgroup label="Mid Row">
+                <option value="row2_left">Circle 2 - Left</option>
+                <option value="row2_right">Circle 2 - Right</option>
+            </optgroup>
+            <optgroup label="3rd Row">
+                <option value="row3_left">Stalls - Mid Left</option>
+                <option value="row3_right">Stalls - Mid Right</option>
+            </optgroup>
+            <optgroup label="Bottom Row">
+                <option value="row4_left">Stalls - Extreme Left</option>
+                <option value="row4_right">Stalls - Extreme Right</option>
+            </optgroup>
         </select>
         <button class="btn-join" onclick="checkAndRegister()">Join Session</button>
     </div>
@@ -67,7 +75,6 @@
             const zone = document.getElementById('zoneSelect').value;
             if (!name) return alert("Enter name!");
 
-            // Check if position is taken
             const snapshot = await database.ref('liveSession').once('value');
             const data = snapshot.val();
             let isTaken = false;
@@ -79,7 +86,7 @@
             }
 
             if (isTaken) {
-                alert("This position is already taken by another runner!");
+                alert("This position is already taken!");
             } else {
                 myName = name;
                 localStorage.setItem('activeRunnerName', myName);
