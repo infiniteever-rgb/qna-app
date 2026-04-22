@@ -1,17 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Speaker Monitor</title>
+    <title>Q&A Control Monitor</title>
     <style>
-        body { background: black; color: yellow; font-family: sans-serif; text-align: center; padding-top: 50px; }
-        .name-box { font-size: 100px; font-weight: bold; text-transform: uppercase; margin: 20px; }
-        .empty { color: #333; font-size: 30px; margin-top: 100px; }
+        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; padding: 20px; overflow: hidden; }
+        #sessionTitle { font-size: 24px; color: #666; margin-bottom: 20px; text-align: center; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; height: 80vh; }
+        .runner-card { 
+            border: 4px solid #333; border-radius: 20px; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: #111; transition: 0.3s; position: relative;
+        }
+        .runner-name { font-size: 40px; font-weight: bold; text-align: center; text-transform: uppercase; }
+        .active { background: #006600 !important; border-color: #00ff00 !important; animation: blink 1s infinite; }
+        .waiting { color: #ff4444; }
+        .active .runner-name { color: #fff; }
+        .clear-btn { 
+            margin-top: 15px; padding: 10px 20px; background: rgba(255,255,255,0.2); 
+            border: none; color: white; border-radius: 5px; cursor: pointer; font-size: 14px;
+        }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        #master-clear { position: fixed; bottom: 20px; right: 20px; padding: 15px; background: #444; border: none; color: white; cursor: pointer; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <div id="container">
-        <div class="empty">WAITING FOR QUESTIONS...</div>
-    </div>
+    <div id="sessionTitle">SESSION: [ID]</div>
+    <div class="grid" id="monitorGrid"></div>
+    <button id="master-clear" onclick="clearEntireSession()">END SESSION / WIPE ALL</button>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -20,37 +35,48 @@
         const firebaseConfig = {
             apiKey: "AIzaSyAvCi3zJFyC-MTyoGR941HFupcUMgPlvtM",
             authDomain: "runner-qna-webapp.firebaseapp.com",
-            databaseURL: "https://runner-qna-webapp-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            databaseURL: "https://runner-qna-webapp-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "runner-qna-webapp",
             storageBucket: "runner-qna-webapp.appspot.com",
             messagingSenderId: "553192423696",
             appId: "1:553192423696:web:95785e12d122407eb46595"
         };
-
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // Listen for changes in the database
-        database.ref('runners').on('value', (snapshot) => {
-            const data = snapshot.val();
-            const container = document.getElementById('container');
-            container.innerHTML = ""; 
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionID = urlParams.get('s') || 'default';
+        document.getElementById('sessionTitle').innerText = "LIVE SESSION: " + sessionID.toUpperCase();
 
-            let count = 0;
-            for (let id in data) {
-                if (data[id].status === true) {
-                    const div = document.createElement('div');
-                    div.className = "name-box";
-                    div.innerText = id;
-                    container.appendChild(div);
-                    count++;
-                }
-            }
+        database.ref('sessions/' + sessionID).on('value', (snap) => {
+            const data = snap.val();
+            const grid = document.getElementById('monitorGrid');
+            grid.innerHTML = "";
 
-            if (count === 0) {
-                container.innerHTML = "<div class='empty'>NO ACTIVE QUESTIONS</div>";
-            }
+            if (!data) return;
+
+            Object.keys(data).forEach(name => {
+                const isReady = data[name].active;
+                const card = document.createElement('div');
+                card.className = "runner-card " + (isReady ? "active" : "waiting");
+                
+                card.innerHTML = `
+                    <div class="runner-name">${name}</div>
+                    ${isReady ? `<button class="clear-btn" onclick="clearRunner('${name}')">ANSWERED</button>` : ''}
+                `;
+                grid.appendChild(card);
+            });
         });
+
+        function clearRunner(name) {
+            database.ref('sessions/' + sessionID + '/' + name).update({ active: false });
+        }
+
+        function clearEntireSession() {
+            if(confirm("Wipe all runners from this session?")) {
+                database.ref('sessions/' + sessionID).remove();
+            }
+        }
     </script>
 </body>
 </html>
