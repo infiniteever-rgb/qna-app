@@ -10,11 +10,9 @@
         input, select { padding: 18px; width: 90%; margin-bottom: 20px; font-size: 18px; border-radius: 12px; border: 1px solid #444; background: #222; color: white; }
         button { padding: 25px; width: 100%; font-size: 22px; cursor: pointer; border: none; border-radius: 18px; font-weight: bold; text-transform: uppercase; }
         .btn-join { background: #3b82f6; color: white; }
-        .btn-ready { background: #22c55e; color: white; height: 250px; margin-top: 20px; transition: transform 0.1s; }
-        .btn-ready:active { transform: scale(0.95); }
+        .btn-ready { background: #22c55e; color: white; height: 250px; margin-top: 20px; }
         .btn-cancel { background: #ef4444; color: white; margin-top: 30px; padding: 15px; font-size: 16px; width: 70%; }
         .status-ready { background: #064e3b !important; }
-        #statusIndicator { font-size: 20px; margin: 15px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -24,29 +22,23 @@
         <input type="text" id="runnerName" placeholder="Your Name">
         <p>Select Your Position:</p>
         <select id="zoneSelect">
-            <optgroup label="Top Floor (Gallery)">
-                <option value="row1_mid">Level 3 - Center</option>
-            </optgroup>
-            <optgroup label="Mid Floor (Circle)">
-                <option value="row1_mid">Level 2 - Center</option>
-                <option value="row2_left">Level 2 - Left</option>
-                <option value="row2_right">Level 2 - Right</option>
-            </optgroup>
-            <optgroup label="Main Floor (Stalls)">
-                <option value="row3_left">Floor - Mid Left</option>
-                <option value="row3_right">Floor - Mid Right</option>
-                <option value="row4_left">Floor - Extreme Left</option>
-                <option value="row4_right">Floor - Extreme Right</option>
-            </optgroup>
+            <option value="row1_mid">L3 - Center (Top)</option>
+            <option value="row2_mid">L2 - Center</option>
+            <option value="row2_left">L2 - Left</option>
+            <option value="row2_right">L2 - Right</option>
+            <option value="row3_left">Floor - Mid Left</option>
+            <option value="row3_right">Floor - Mid Right</option>
+            <option value="row4_left">Floor - Extreme Left</option>
+            <option value="row4_right">Floor - Extreme Right</option>
         </select>
-        <button class="btn-join" onclick="register()">Join Session</button>
+        <button class="btn-join" onclick="checkAndRegister()">Join Session</button>
     </div>
 
     <div id="active" class="active-screen">
         <h2 id="greeting">Hi</h2>
         <div id="statusIndicator">Status: Waiting</div>
         <button id="readyBtn" class="btn-ready" onclick="setStatus(true)">I HAVE A PERSON</button>
-        <button class="btn-cancel" onclick="setStatus(false)">CANCEL / CLEAR</button>
+        <button class="btn-cancel" onclick="setStatus(false)">CANCEL</button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -70,13 +62,30 @@
         if (myName) { showActiveScreen(); } 
         else { document.getElementById('setup').classList.add('visible'); }
 
-        function register() {
-            myName = document.getElementById('runnerName').value.trim();
+        async function checkAndRegister() {
+            const name = document.getElementById('runnerName').value.trim();
             const zone = document.getElementById('zoneSelect').value;
-            if (!myName) return alert("Enter your name!");
-            localStorage.setItem('activeRunnerName', myName);
-            showActiveScreen();
-            database.ref('liveSession/' + myName).set({ active: false, zone: zone });
+            if (!name) return alert("Enter name!");
+
+            // Check if position is taken
+            const snapshot = await database.ref('liveSession').once('value');
+            const data = snapshot.val();
+            let isTaken = false;
+            
+            if (data) {
+                Object.values(data).forEach(r => {
+                    if (r.zone === zone) isTaken = true;
+                });
+            }
+
+            if (isTaken) {
+                alert("This position is already taken by another runner!");
+            } else {
+                myName = name;
+                localStorage.setItem('activeRunnerName', myName);
+                database.ref('liveSession/' + myName).set({ active: false, zone: zone });
+                showActiveScreen();
+            }
         }
 
         function showActiveScreen() {
@@ -90,8 +99,7 @@
                     location.reload(); 
                 } else {
                     const data = snap.val();
-                    document.getElementById('statusIndicator').innerText = data.active ? "STATUS: PERSON READY" : "Status: Waiting";
-                    document.getElementById('statusIndicator').style.color = data.active ? "#22c55e" : "#666";
+                    document.getElementById('statusIndicator').innerText = data.active ? "STATUS: READY" : "Status: Waiting";
                     if(data.active) document.body.classList.add('status-ready');
                     else document.body.classList.remove('status-ready');
                 }
