@@ -4,32 +4,49 @@
     <title>Runner Portal</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <style>
-        body { font-family: -apple-system, sans-serif; text-align: center; padding: 20px; background: #121212; color: white; transition: background 0.3s; }
-        .setup-screen { display: block; padding-top: 50px; }
-        .active-screen { display: none; }
-        input { padding: 18px; width: 85%; margin-bottom: 20px; font-size: 18px; border-radius: 12px; border: 1px solid #444; background: #222; color: white; }
-        button { padding: 25px; width: 95%; font-size: 22px; cursor: pointer; border: none; border-radius: 18px; font-weight: bold; text-transform: uppercase; }
+        body { font-family: -apple-system, sans-serif; text-align: center; padding: 20px; background: #121212; color: white; }
+        .setup-screen, .active-screen { display: none; }
+        .visible { display: block; }
+        input, select { padding: 18px; width: 90%; margin-bottom: 20px; font-size: 18px; border-radius: 12px; border: 1px solid #444; background: #222; color: white; }
+        button { padding: 25px; width: 100%; font-size: 22px; cursor: pointer; border: none; border-radius: 18px; font-weight: bold; text-transform: uppercase; }
         .btn-join { background: #3b82f6; color: white; }
-        .btn-ready { background: #22c55e; color: white; height: 250px; margin-top: 20px; box-shadow: 0 0 20px rgba(34,197,94,0.4); }
-        .btn-cancel { background: #ef4444; color: white; margin-top: 30px; padding: 15px; font-size: 16px; width: 60%; }
-        .status-msg { margin: 15px; font-size: 20px; font-weight: bold; }
-        .ready-state { background: #064e3b !important; }
+        .btn-ready { background: #22c55e; color: white; height: 250px; margin-top: 20px; transition: transform 0.1s; }
+        .btn-ready:active { transform: scale(0.95); }
+        .btn-cancel { background: #ef4444; color: white; margin-top: 30px; padding: 15px; font-size: 16px; width: 70%; }
+        .status-ready { background: #064e3b !important; }
+        #statusIndicator { font-size: 20px; margin: 15px; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="setup" class="setup-screen">
-        <h1>Welcome</h1>
-        <p>Enter your name/aisle to start</p>
-        <input type="text" id="runnerName" placeholder="e.g. John - Aisle 1">
+        <h1>Theatre Registration</h1>
+        <input type="text" id="runnerName" placeholder="Your Name">
+        <p>Select Your Position:</p>
+        <select id="zoneSelect">
+            <optgroup label="Top Floor (Gallery)">
+                <option value="row1_mid">Level 3 - Center</option>
+            </optgroup>
+            <optgroup label="Mid Floor (Circle)">
+                <option value="row1_mid">Level 2 - Center</option>
+                <option value="row2_left">Level 2 - Left</option>
+                <option value="row2_right">Level 2 - Right</option>
+            </optgroup>
+            <optgroup label="Main Floor (Stalls)">
+                <option value="row3_left">Floor - Mid Left</option>
+                <option value="row3_right">Floor - Mid Right</option>
+                <option value="row4_left">Floor - Extreme Left</option>
+                <option value="row4_right">Floor - Extreme Right</option>
+            </optgroup>
+        </select>
         <button class="btn-join" onclick="register()">Join Session</button>
     </div>
 
     <div id="active" class="active-screen">
-        <h2 id="greeting">Hi Runner</h2>
-        <div id="statusIndicator" class="status-msg" style="color: #666;">Status: Waiting</div>
+        <h2 id="greeting">Hi</h2>
+        <div id="statusIndicator">Status: Waiting</div>
         <button id="readyBtn" class="btn-ready" onclick="setStatus(true)">I HAVE A PERSON</button>
-        <button class="btn-cancel" onclick="setStatus(false)">CANCEL</button>
+        <button class="btn-cancel" onclick="setStatus(false)">CANCEL / CLEAR</button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -50,39 +67,39 @@
         
         let myName = localStorage.getItem('activeRunnerName');
 
-        if (myName) { showActiveScreen(); }
+        if (myName) { showActiveScreen(); } 
+        else { document.getElementById('setup').classList.add('visible'); }
 
         function register() {
             myName = document.getElementById('runnerName').value.trim();
-            if (!myName) return alert("Please enter your name!");
+            const zone = document.getElementById('zoneSelect').value;
+            if (!myName) return alert("Enter your name!");
             localStorage.setItem('activeRunnerName', myName);
             showActiveScreen();
-            setStatus(false); 
+            database.ref('liveSession/' + myName).set({ active: false, zone: zone });
         }
 
         function showActiveScreen() {
-            document.getElementById('setup').style.display = 'none';
-            document.getElementById('active').style.display = 'block';
+            document.getElementById('setup').classList.remove('visible');
+            document.getElementById('active').classList.add('visible');
             document.getElementById('greeting').innerText = myName;
             
-            // Listen for Remote Reset from Monitor
             database.ref('liveSession/' + myName).on('value', (snap) => {
-                const data = snap.val();
-                if (!data) { // If monitor wipes data, reset runner UI
-                    document.getElementById('statusIndicator').innerText = "Status: Waiting";
-                    document.getElementById('statusIndicator').style.color = "#666";
-                    document.body.classList.remove('ready-state');
+                if (!snap.exists()) {
+                    localStorage.removeItem('activeRunnerName');
+                    location.reload(); 
                 } else {
-                    document.getElementById('statusIndicator').innerText = data.active ? "STATUS: READY" : "Status: Waiting";
+                    const data = snap.val();
+                    document.getElementById('statusIndicator').innerText = data.active ? "STATUS: PERSON READY" : "Status: Waiting";
                     document.getElementById('statusIndicator').style.color = data.active ? "#22c55e" : "#666";
-                    if(data.active) document.body.classList.add('ready-state');
-                    else document.body.classList.remove('ready-state');
+                    if(data.active) document.body.classList.add('status-ready');
+                    else document.body.classList.remove('status-ready');
                 }
             });
         }
 
         function setStatus(isReady) {
-            database.ref('liveSession/' + myName).set({ active: isReady });
+            database.ref('liveSession/' + myName).update({ active: isReady });
         }
     </script>
 </body>
