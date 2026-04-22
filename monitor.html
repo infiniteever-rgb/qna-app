@@ -1,66 +1,55 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Theatre Master Monitor</title>
+    <title>Testimony Pastors Monitor</title>
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; margin: 0; padding: 10px; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-        .header { display: flex; justify-content: space-between; padding: 10px; background: #111; align-items: center; }
+        .header { display: flex; justify-content: space-between; padding: 10px; background: #111; align-items: center; border-bottom: 2px solid #333; }
         
         .theatre-grid { 
             display: grid; 
             grid-template-rows: repeat(4, 1fr); 
             grid-template-columns: 1fr 1fr;
-            gap: 12px; flex-grow: 1; padding: 10px;
+            gap: 15px; flex-grow: 1; padding: 15px;
         }
 
-        .slot { border: 2px dashed #222; border-radius: 15px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
-        .slot-label { position: absolute; top: 8px; left: 12px; font-size: 11px; color: #444; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .slot { border: 1px solid #222; border-radius: 15px; display: flex; align-items: center; justify-content: center; position: relative; background: #050505; }
+        .slot-label { position: absolute; top: 10px; left: 15px; font-size: 11px; color: #444; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* Row Positioning */
-        #slot-row1_left { grid-row: 1; grid-column: 1; }
-        #slot-row1_right { grid-row: 1; grid-column: 2; }
-        #slot-row2_left { grid-row: 2; grid-column: 1; }
-        #slot-row2_right { grid-row: 2; grid-column: 2; }
-        #slot-row3_left { grid-row: 3; grid-column: 1; }
-        #slot-row3_right { grid-row: 3; grid-column: 2; }
-        #slot-row4_left { grid-row: 4; grid-column: 1; }
-        #slot-row4_right { grid-row: 4; grid-column: 2; }
+        /* Row Assignments */
+        .circle2-slot { grid-row: 1; }
+        .circle1-slot { grid-row: 2; }
+        .stalls-row3 { grid-row: 3; }
+        .stalls-row4 { grid-row: 4; }
 
         .card { 
             width: 100%; height: 100%; border-radius: 15px; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: #0a0a0a; border: 3px solid #222; z-index: 2;
+            background: #1a1a1a; border: 2px solid #333; z-index: 2;
         }
-        .ready { background: #052e16 !important; border-color: #22c55e !important; animation: blink 1.2s infinite; }
-        .name-text { font-size: 30px; font-weight: 900; color: #333; text-transform: uppercase; }
-        .ready .name-text { color: #fff; font-size: 36px; }
         
-        .btn-done { margin-top: 15px; padding: 10px 20px; background: #22c55e; border: none; color: white; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        @keyframes blink { 0%, 100% { opacity: 1; box-shadow: inset 0 0 20px rgba(34,197,94,0.3); } 50% { opacity: 0.8; box-shadow: inset 0 0 5px rgba(34,197,94,0.1); } }
+        /* Brightened Inactive State */
+        .name-text { font-size: 32px; font-weight: bold; color: #E0E0E0; text-transform: uppercase; text-align: center; }
         
-        .reset-btn { background: #991b1b; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        /* Active State */
+        .ready { background: #052e16 !important; border-color: #22c55e !important; animation: blink 1s infinite; }
+        .ready .name-text { color: #fff; font-size: 40px; font-weight: 900; }
+        
+        .btn-done { margin-top: 15px; padding: 12px 25px; background: #22c55e; border: none; color: white; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 18px; }
+        @keyframes blink { 0%, 100% { opacity: 1; box-shadow: inset 0 0 30px rgba(34,197,94,0.4); } 50% { opacity: 0.8; } }
+        
+        .reset-btn { background: #444; color: #bbb; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <span style="color:#3b82f6; font-size: 18px; font-weight: bold;">STAGE MONITOR: THEATRE LAYOUT</span>
-        <button class="reset-btn" onclick="resetAll()">RESET NEW SESSION</button>
+        <span style="color:#3b82f6; font-size: 22px; font-weight: bold;">TESTIMONY PASTORS</span>
+        <button class="reset-btn" onclick="resetAll()">RESET SESSION</button>
     </div>
 
-    <div class="theatre-grid">
-        <div class="slot" id="slot-row1_left"><div class="slot-label">Circle 2 - Center</div></div>
-        <div class="slot" id="slot-row1_right"><div class="slot-label">Circle 1 - Mid</div></div>
-        
-        <div class="slot" id="slot-row2_left"><div class="slot-label">Circle 2 - Left</div></div>
-        <div class="slot" id="slot-row2_right"><div class="slot-label">Circle 2 - Right</div></div>
-        
-        <div class="slot" id="slot-row3_left"><div class="slot-label">Stalls - Mid Left</div></div>
-        <div class="slot" id="slot-row3_right"><div class="slot-label">Stalls - Mid Right</div></div>
-        
-        <div class="slot" id="slot-row4_left"><div class="slot-label">Stalls - Ex Left</div></div>
-        <div class="slot" id="slot-row4_right"><div class="slot-label">Stalls - Ex Right</div></div>
-    </div>
+    <div class="theatre-grid" id="gridContainer">
+        </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -80,25 +69,45 @@
 
         database.ref('liveSession').on('value', (snap) => {
             const data = snap.val() || {};
-            
-            document.querySelectorAll('.slot').forEach(slot => {
-                const label = slot.querySelector('.slot-label').outerHTML;
-                slot.innerHTML = label;
-            });
+            const container = document.getElementById('gridContainer');
+            container.innerHTML = "";
+
+            // Arrays to hold runners by level
+            const circle2 = [];
+            const circle1 = [];
+            const stalls = [];
 
             Object.keys(data).forEach(name => {
-                const runner = data[name];
-                const slot = document.getElementById('slot-' + runner.zone);
-                if (slot) {
-                    const card = document.createElement('div');
-                    card.className = `card ${runner.active ? 'ready' : ''}`;
-                    card.innerHTML = `
-                        <div class="name-text">${name}</div>
-                        ${runner.active ? `<button class="btn-done" onclick="clearRunner('${name}')">MARK ANSWERED</button>` : ''}
-                    `;
-                    slot.appendChild(card);
-                }
+                const runner = { name, ...data[name] };
+                if (runner.level === 'circle2') circle2.push(runner);
+                else if (runner.level === 'circle1') circle1.push(runner);
+                else stalls.push(runner);
             });
+
+            // Helper to create cards
+            const createCard = (runner, row, col) => {
+                const slot = document.createElement('div');
+                slot.className = 'slot';
+                slot.style.gridRow = row;
+                slot.style.gridColumn = col;
+                
+                const card = document.createElement('div');
+                card.className = `card ${runner.active ? 'ready' : ''}`;
+                card.innerHTML = `
+                    <div class="name-text">${runner.name}</div>
+                    ${runner.active ? `<button class="btn-done" onclick="clearRunner('${runner.name}')">DONE</button>` : ''}
+                `;
+                slot.appendChild(card);
+                container.appendChild(slot);
+            };
+
+            // Render Circle 2 (Row 1)
+            circle2.slice(0, 2).forEach((r, i) => createCard(r, 1, i + 1));
+            // Render Circle 1 (Row 2)
+            circle1.slice(0, 2).forEach((r, i) => createCard(r, 2, i + 1));
+            // Render Stalls (Rows 3 & 4)
+            stalls.slice(0, 2).forEach((r, i) => createCard(r, 3, i + 1));
+            stalls.slice(2, 4).forEach((r, i) => createCard(r, 4, i + 1));
         });
 
         function clearRunner(name) {
@@ -106,7 +115,7 @@
         }
 
         function resetAll() {
-            if(confirm("End current session? This logs out all runners.")) database.ref('liveSession').remove();
+            if(confirm("End session? All runners will be logged out.")) database.ref('liveSession').remove();
         }
     </script>
 </body>
