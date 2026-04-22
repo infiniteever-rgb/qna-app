@@ -1,43 +1,51 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Q&A Master Monitor</title>
+    <title>Theatre Master Map</title>
     <style>
-        body { background: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #222; padding-bottom: 15px; margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; min-height: 70vh; }
-        .card { 
-            border: 4px solid #333; border-radius: 25px; background: #111;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 30px; transition: all 0.2s ease;
+        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; padding: 15px; height: 100vh; display: flex; flex-direction: column; }
+        .header { display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 2px solid #222; margin-bottom: 15px; }
+        
+        /* 4-Row Theatre Map */
+        .theatre-grid { 
+            display: grid; 
+            grid-template-rows: repeat(4, 1fr); 
+            grid-template-columns: 1fr 1fr;
+            gap: 15px; flex-grow: 1; 
         }
-        .name-text { font-size: 38px; font-weight: 900; text-align: center; text-transform: uppercase; color: #444; }
+
+        /* Logic for placing cards in rows */
+        .zone-row1_mid { grid-row: 1; grid-column: 1 / span 2; }
+        .zone-row2_left { grid-row: 2; grid-column: 1; }
+        .zone-row2_right { grid-row: 2; grid-column: 2; }
+        .zone-row3_left { grid-row: 3; grid-column: 1; }
+        .zone-row3_right { grid-row: 3; grid-column: 2; }
+        .zone-row4_left { grid-row: 4; grid-column: 1; }
+        .zone-row4_right { grid-row: 4; grid-column: 2; }
+
+        .card { 
+            background: #111; border: 3px solid #333; border-radius: 20px; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: relative; transition: 0.3s;
+        }
+        .ready { background: #052e16 !important; border-color: #22c55e !important; animation: glow 1.5s infinite; }
+        .name-text { font-size: 32px; font-weight: 900; text-transform: uppercase; color: #444; }
+        .ready .name-text { color: #fff; }
         
-        /* State: Runner has a person */
-        .ready { background: #052e16 !important; border-color: #22c55e !important; box-shadow: 0 0 40px rgba(34,197,94,0.2); }
-        .ready .name-text { color: #fff; animation: pulse 1.5s infinite; }
+        .btn-done { margin-top: 15px; padding: 10px 20px; background: #22c55e; border: none; color: white; border-radius: 8px; cursor: pointer; font-weight: bold; }
         
-        .clear-single { margin-top: 20px; padding: 12px 24px; background: #22c55e; border: none; color: white; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 18px; }
-        
-        .controls { background: #111; padding: 15px; border-radius: 15px; display: flex; gap: 10px; }
-        .btn-danger { background: #991b1b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        .empty-msg { grid-column: 1/-1; text-align: center; color: #444; font-size: 24px; margin-top: 100px; }
+        .label { position: absolute; top: 10px; left: 15px; font-size: 12px; color: #333; font-weight: bold; }
+        @keyframes glow { 0%, 100% { box-shadow: inset 0 0 20px #22c55e; } 50% { box-shadow: inset 0 0 5px #22c55e; } }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h1 style="margin:0; color:#3b82f6;">Q&A MONITOR</h1>
-        <div class="controls">
-            <button class="btn-danger" onclick="resetSession()">RESET NEW SESSION</button>
-        </div>
+        <span style="color:#3b82f6; font-weight:bold;">STAGE MONITOR: THEATRE MAP</span>
+        <button onclick="resetAll()" style="background:#333; color:#888; border:none; padding:5px 15px; border-radius:5px; cursor:pointer;">RESET ALL</button>
     </div>
 
-    <div class="grid" id="monitorGrid">
-        <div class="empty-msg">No runners connected yet...</div>
-    </div>
+    <div class="theatre-grid" id="mainGrid"></div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -56,23 +64,20 @@
         const database = firebase.database();
 
         database.ref('liveSession').on('value', (snap) => {
-            const data = snap.val();
-            const grid = document.getElementById('monitorGrid');
+            const data = snap.val() || {};
+            const grid = document.getElementById('mainGrid');
             grid.innerHTML = "";
 
-            if (!data) {
-                grid.innerHTML = '<div class="empty-msg">Waiting for runners to join...</div>';
-                return;
-            }
-
             Object.keys(data).forEach(name => {
-                const active = data[name].active;
+                const runner = data[name];
                 const card = document.createElement('div');
-                card.className = `card ${active ? 'ready' : ''}`;
+                // Use the zone to set the class (handles row/column placement)
+                card.className = `card zone-${runner.zone} ${runner.active ? 'ready' : ''}`;
                 
                 card.innerHTML = `
+                    <div class="label">${runner.zone.replace('_',' ').toUpperCase()}</div>
                     <div class="name-text">${name}</div>
-                    ${active ? `<button class="clear-single" onclick="clearRunner('${name}')">MARK AS ANSWERED</button>` : ''}
+                    ${runner.active ? `<button class="btn-done" onclick="clearRunner('${name}')">ANSWERED</button>` : ''}
                 `;
                 grid.appendChild(card);
             });
@@ -82,8 +87,8 @@
             database.ref('liveSession/' + name).update({ active: false });
         }
 
-        function resetSession() {
-            if(confirm("This will clear all names and reset the board for the next session. Continue?")) {
+        function resetAll() {
+            if(confirm("End session? All runners will be logged out.")) {
                 database.ref('liveSession').remove();
             }
         }
