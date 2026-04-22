@@ -1,51 +1,62 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Theatre Master Map</title>
+    <title>Theatre Master Monitor</title>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; padding: 15px; height: 100vh; display: flex; flex-direction: column; }
-        .header { display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 2px solid #222; margin-bottom: 15px; }
+        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; padding: 10px; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        .header { display: flex; justify-content: space-between; padding: 10px; background: #111; }
         
-        /* 4-Row Theatre Map */
         .theatre-grid { 
             display: grid; 
             grid-template-rows: repeat(4, 1fr); 
             grid-template-columns: 1fr 1fr;
-            gap: 15px; flex-grow: 1; 
+            gap: 10px; flex-grow: 1; padding: 10px;
         }
 
-        /* Logic for placing cards in rows */
-        .zone-row1_mid { grid-row: 1; grid-column: 1 / span 2; }
-        .zone-row2_left { grid-row: 2; grid-column: 1; }
-        .zone-row2_right { grid-row: 2; grid-column: 2; }
-        .zone-row3_left { grid-row: 3; grid-column: 1; }
-        .zone-row3_right { grid-row: 3; grid-column: 2; }
-        .zone-row4_left { grid-row: 4; grid-column: 1; }
-        .zone-row4_right { grid-row: 4; grid-column: 2; }
+        /* Fixed Slots */
+        .slot { border: 2px dashed #222; border-radius: 15px; display: flex; align-items: center; justify-content: center; position: relative; }
+        .slot-label { position: absolute; top: 5px; left: 10px; font-size: 10px; color: #333; }
+
+        /* Positioning */
+        #slot-row1_mid { grid-row: 1; grid-column: 1 / span 2; }
+        #slot-row2_left { grid-row: 2; grid-column: 1; }
+        #slot-row2_mid { grid-row: 2; grid-column: 1 / span 2; z-index: 1; width: 50%; margin: 0 auto; border-style: solid; background: #000; }
+        #slot-row2_right { grid-row: 2; grid-column: 2; }
+        #slot-row3_left { grid-row: 3; grid-column: 1; }
+        #slot-row3_right { grid-row: 3; grid-column: 2; }
+        #slot-row4_left { grid-row: 4; grid-column: 1; }
+        #slot-row4_right { grid-row: 4; grid-column: 2; }
 
         .card { 
-            background: #111; border: 3px solid #333; border-radius: 20px; 
+            width: 100%; height: 100%; border-radius: 15px; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            position: relative; transition: 0.3s;
+            background: #111; border: 3px solid #333;
         }
-        .ready { background: #052e16 !important; border-color: #22c55e !important; animation: glow 1.5s infinite; }
-        .name-text { font-size: 32px; font-weight: 900; text-transform: uppercase; color: #444; }
-        .ready .name-text { color: #fff; }
+        .ready { background: #052e16 !important; border-color: #22c55e !important; animation: blink 1s infinite; }
+        .name-text { font-size: 28px; font-weight: bold; color: #444; text-transform: uppercase; }
+        .ready .name-text { color: #fff; font-size: 34px; }
         
-        .btn-done { margin-top: 15px; padding: 10px 20px; background: #22c55e; border: none; color: white; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        
-        .label { position: absolute; top: 10px; left: 15px; font-size: 12px; color: #333; font-weight: bold; }
-        @keyframes glow { 0%, 100% { box-shadow: inset 0 0 20px #22c55e; } 50% { box-shadow: inset 0 0 5px #22c55e; } }
+        .btn-done { margin-top: 10px; padding: 8px 15px; background: #22c55e; border: none; color: white; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <span style="color:#3b82f6; font-weight:bold;">STAGE MONITOR: THEATRE MAP</span>
-        <button onclick="resetAll()" style="background:#333; color:#888; border:none; padding:5px 15px; border-radius:5px; cursor:pointer;">RESET ALL</button>
+        <span>THEATRE Q&A MAP</span>
+        <button onclick="resetAll()">NEW SESSION (RESET)</button>
     </div>
 
-    <div class="theatre-grid" id="mainGrid"></div>
+    <div class="theatre-grid">
+        <div class="slot" id="slot-row1_mid"><div class="slot-label">L3 CENTER</div></div>
+        <div class="slot" id="slot-row2_left"><div class="slot-label">L2 LEFT</div></div>
+        <div class="slot" id="slot-row2_mid"><div class="slot-label">L2 CENTER</div></div>
+        <div class="slot" id="slot-row2_right"><div class="slot-label">L2 RIGHT</div></div>
+        <div class="slot" id="slot-row3_left"><div class="slot-label">FLOOR MID-L</div></div>
+        <div class="slot" id="slot-row3_right"><div class="slot-label">FLOOR MID-R</div></div>
+        <div class="slot" id="slot-row4_left"><div class="slot-label">FLOOR EX-L</div></div>
+        <div class="slot" id="slot-row4_right"><div class="slot-label">FLOOR EX-R</div></div>
+    </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -65,21 +76,25 @@
 
         database.ref('liveSession').on('value', (snap) => {
             const data = snap.val() || {};
-            const grid = document.getElementById('mainGrid');
-            grid.innerHTML = "";
+            
+            // Clear all slots first (keep the labels)
+            document.querySelectorAll('.slot').forEach(slot => {
+                const label = slot.querySelector('.slot-label').outerHTML;
+                slot.innerHTML = label;
+            });
 
             Object.keys(data).forEach(name => {
                 const runner = data[name];
-                const card = document.createElement('div');
-                // Use the zone to set the class (handles row/column placement)
-                card.className = `card zone-${runner.zone} ${runner.active ? 'ready' : ''}`;
-                
-                card.innerHTML = `
-                    <div class="label">${runner.zone.replace('_',' ').toUpperCase()}</div>
-                    <div class="name-text">${name}</div>
-                    ${runner.active ? `<button class="btn-done" onclick="clearRunner('${name}')">ANSWERED</button>` : ''}
-                `;
-                grid.appendChild(card);
+                const slot = document.getElementById('slot-' + runner.zone);
+                if (slot) {
+                    const card = document.createElement('div');
+                    card.className = `card ${runner.active ? 'ready' : ''}`;
+                    card.innerHTML = `
+                        <div class="name-text">${name}</div>
+                        ${runner.active ? `<button class="btn-done" onclick="clearRunner('${name}')">DONE</button>` : ''}
+                    `;
+                    slot.appendChild(card);
+                }
             });
         });
 
@@ -88,9 +103,7 @@
         }
 
         function resetAll() {
-            if(confirm("End session? All runners will be logged out.")) {
-                database.ref('liveSession').remove();
-            }
+            if(confirm("Wipe all runners?")) database.ref('liveSession').remove();
         }
     </script>
 </body>
