@@ -4,54 +4,85 @@
     <title>Runner Portal</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #222; color: white; }
-        input { padding: 15px; width: 80%; margin-bottom: 20px; font-size: 16px; border-radius: 8px; border: 1px solid #444; }
-        button { padding: 25px; width: 85%; font-size: 20px; cursor: pointer; border: none; border-radius: 15px; font-weight: bold; }
-        .btn-active { background: #ff4444; color: white; }
-        .btn-inactive { background: #44bb44; color: white; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #1a1a1a; color: white; }
+        .setup-screen { display: block; }
+        .active-screen { display: none; }
+        input { padding: 15px; width: 80%; margin-bottom: 20px; font-size: 18px; border-radius: 8px; }
+        button { padding: 30px; width: 100%; font-size: 24px; cursor: pointer; border: none; border-radius: 15px; font-weight: bold; text-transform: uppercase; }
+        .btn-ready { background: #44bb44; color: white; height: 200px; }
+        .btn-cancel { background: #ff4444; color: white; margin-top: 20px; padding: 15px; font-size: 16px; }
+        .status-msg { margin: 20px; font-size: 18px; color: #aaa; }
     </style>
 </head>
 <body>
-    <h2>Mic Runner Input</h2>
-    <input type="text" id="runnerName" placeholder="Enter Name (e.g. Aisle 1)">
-    <br><br>
-    <button id="mainBtn" class="btn-inactive" onclick="toggleStatus()">I HAVE A QUESTION</button>
+
+    <div id="setup" class="setup-screen">
+        <h2>Enter Name for Session</h2>
+        <input type="text" id="runnerName" placeholder="e.g. John - Aisle 1">
+        <button onclick="register()">Join Session</button>
+    </div>
+
+    <div id="active" class="active-screen">
+        <h2 id="greeting">Hi John</h2>
+        <div id="statusIndicator" class="status-msg">Status: Waiting</div>
+        <button id="readyBtn" class="btn-ready" onclick="setStatus(true)">I HAVE A PERSON</button>
+        <button class="btn-cancel" onclick="setStatus(false)">CANCEL / CLEAR</button>
+    </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <script>
-        // YOUR SPECIFIC CONFIG WITH THE MISSING DATABASE URL ADDED
         const firebaseConfig = {
             apiKey: "AIzaSyAvCi3zJFyC-MTyoGR941HFupcUMgPlvtM",
             authDomain: "runner-qna-webapp.firebaseapp.com",
-            databaseURL: "https://runner-qna-webapp-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            databaseURL: "https://runner-qna-webapp-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "runner-qna-webapp",
             storageBucket: "runner-qna-webapp.appspot.com",
             messagingSenderId: "553192423696",
             appId: "1:553192423696:web:95785e12d122407eb46595"
         };
-        
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-        let isActive = false;
 
-        function toggleStatus() {
-            const name = document.getElementById('runnerName').value;
-            if (!name) return alert("Please enter your name first!");
+        // Get Session ID from URL (e.g., ?s=1). Defaults to 'default'
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionID = urlParams.get('s') || 'default';
+        
+        let myName = localStorage.getItem('runnerName');
 
-            isActive = !isActive;
-            const btn = document.getElementById('mainBtn');
+        if (myName) { showActiveScreen(); }
 
-            // Send data to Firebase
-            database.ref('runners/' + name).set({
-                status: isActive,
-                timestamp: Date.now()
-            });
-
-            btn.innerText = isActive ? "CANCEL / DONE" : "I HAVE A QUESTION";
-            btn.className = isActive ? "btn-active" : "btn-inactive";
+        function register() {
+            myName = document.getElementById('runnerName').value.trim();
+            if (!myName) return alert("Enter your name!");
+            localStorage.setItem('runnerName', myName);
+            showActiveScreen();
+            setStatus(false); // Register name in database immediately
         }
+
+        function showActiveScreen() {
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('active').style.display = 'block';
+            document.getElementById('greeting').innerText = "Hi " + myName;
+        }
+
+        function setStatus(isReady) {
+            database.ref('sessions/' + sessionID + '/' + myName).set({
+                active: isReady,
+                ts: Date.now()
+            });
+            document.getElementById('statusIndicator').innerText = isReady ? "Status: PERSON READY" : "Status: Waiting";
+            document.getElementById('statusIndicator').style.color = isReady ? "#44bb44" : "#aaa";
+        }
+
+        // Listen for "Remote Clear" from Monitor
+        database.ref('sessions/' + sessionID + '/' + myName).on('value', (snap) => {
+            if (snap.val() && snap.val().active === false) {
+                document.getElementById('statusIndicator').innerText = "Status: Waiting";
+                document.getElementById('statusIndicator').style.color = "#aaa";
+            }
+        });
     </script>
 </body>
 </html>
