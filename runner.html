@@ -2,31 +2,34 @@
 <html>
 <head>
     <title>Runner Portal</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #1a1a1a; color: white; }
-        .setup-screen { display: block; }
+        body { font-family: -apple-system, sans-serif; text-align: center; padding: 20px; background: #121212; color: white; transition: background 0.3s; }
+        .setup-screen { display: block; padding-top: 50px; }
         .active-screen { display: none; }
-        input { padding: 15px; width: 80%; margin-bottom: 20px; font-size: 18px; border-radius: 8px; }
-        button { padding: 30px; width: 100%; font-size: 24px; cursor: pointer; border: none; border-radius: 15px; font-weight: bold; text-transform: uppercase; }
-        .btn-ready { background: #44bb44; color: white; height: 200px; }
-        .btn-cancel { background: #ff4444; color: white; margin-top: 20px; padding: 15px; font-size: 16px; }
-        .status-msg { margin: 20px; font-size: 18px; color: #aaa; }
+        input { padding: 18px; width: 85%; margin-bottom: 20px; font-size: 18px; border-radius: 12px; border: 1px solid #444; background: #222; color: white; }
+        button { padding: 25px; width: 95%; font-size: 22px; cursor: pointer; border: none; border-radius: 18px; font-weight: bold; text-transform: uppercase; }
+        .btn-join { background: #3b82f6; color: white; }
+        .btn-ready { background: #22c55e; color: white; height: 250px; margin-top: 20px; box-shadow: 0 0 20px rgba(34,197,94,0.4); }
+        .btn-cancel { background: #ef4444; color: white; margin-top: 30px; padding: 15px; font-size: 16px; width: 60%; }
+        .status-msg { margin: 15px; font-size: 20px; font-weight: bold; }
+        .ready-state { background: #064e3b !important; }
     </style>
 </head>
 <body>
 
     <div id="setup" class="setup-screen">
-        <h2>Enter Name for Session</h2>
+        <h1>Welcome</h1>
+        <p>Enter your name/aisle to start</p>
         <input type="text" id="runnerName" placeholder="e.g. John - Aisle 1">
-        <button onclick="register()">Join Session</button>
+        <button class="btn-join" onclick="register()">Join Session</button>
     </div>
 
     <div id="active" class="active-screen">
-        <h2 id="greeting">Hi John</h2>
-        <div id="statusIndicator" class="status-msg">Status: Waiting</div>
+        <h2 id="greeting">Hi Runner</h2>
+        <div id="statusIndicator" class="status-msg" style="color: #666;">Status: Waiting</div>
         <button id="readyBtn" class="btn-ready" onclick="setStatus(true)">I HAVE A PERSON</button>
-        <button class="btn-cancel" onclick="setStatus(false)">CANCEL / CLEAR</button>
+        <button class="btn-cancel" onclick="setStatus(false)">CANCEL</button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -44,45 +47,43 @@
         };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-
-        // Get Session ID from URL (e.g., ?s=1). Defaults to 'default'
-        const urlParams = new URLSearchParams(window.location.search);
-        const sessionID = urlParams.get('s') || 'default';
         
-        let myName = localStorage.getItem('runnerName');
+        let myName = localStorage.getItem('activeRunnerName');
 
         if (myName) { showActiveScreen(); }
 
         function register() {
             myName = document.getElementById('runnerName').value.trim();
-            if (!myName) return alert("Enter your name!");
-            localStorage.setItem('runnerName', myName);
+            if (!myName) return alert("Please enter your name!");
+            localStorage.setItem('activeRunnerName', myName);
             showActiveScreen();
-            setStatus(false); // Register name in database immediately
+            setStatus(false); 
         }
 
         function showActiveScreen() {
             document.getElementById('setup').style.display = 'none';
             document.getElementById('active').style.display = 'block';
-            document.getElementById('greeting').innerText = "Hi " + myName;
+            document.getElementById('greeting').innerText = myName;
+            
+            // Listen for Remote Reset from Monitor
+            database.ref('liveSession/' + myName).on('value', (snap) => {
+                const data = snap.val();
+                if (!data) { // If monitor wipes data, reset runner UI
+                    document.getElementById('statusIndicator').innerText = "Status: Waiting";
+                    document.getElementById('statusIndicator').style.color = "#666";
+                    document.body.classList.remove('ready-state');
+                } else {
+                    document.getElementById('statusIndicator').innerText = data.active ? "STATUS: READY" : "Status: Waiting";
+                    document.getElementById('statusIndicator').style.color = data.active ? "#22c55e" : "#666";
+                    if(data.active) document.body.classList.add('ready-state');
+                    else document.body.classList.remove('ready-state');
+                }
+            });
         }
 
         function setStatus(isReady) {
-            database.ref('sessions/' + sessionID + '/' + myName).set({
-                active: isReady,
-                ts: Date.now()
-            });
-            document.getElementById('statusIndicator').innerText = isReady ? "Status: PERSON READY" : "Status: Waiting";
-            document.getElementById('statusIndicator').style.color = isReady ? "#44bb44" : "#aaa";
+            database.ref('liveSession/' + myName).set({ active: isReady });
         }
-
-        // Listen for "Remote Clear" from Monitor
-        database.ref('sessions/' + sessionID + '/' + myName).on('value', (snap) => {
-            if (snap.val() && snap.val().active === false) {
-                document.getElementById('statusIndicator').innerText = "Status: Waiting";
-                document.getElementById('statusIndicator').style.color = "#aaa";
-            }
-        });
     </script>
 </body>
 </html>
