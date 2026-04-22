@@ -1,32 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Q&A Control Monitor</title>
+    <title>Q&A Master Monitor</title>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; padding: 20px; overflow: hidden; }
-        #sessionTitle { font-size: 24px; color: #666; margin-bottom: 20px; text-align: center; }
-        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; height: 80vh; }
-        .runner-card { 
-            border: 4px solid #333; border-radius: 20px; 
+        body { background: #000; color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #222; padding-bottom: 15px; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; min-height: 70vh; }
+        .card { 
+            border: 4px solid #333; border-radius: 25px; background: #111;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: #111; transition: 0.3s; position: relative;
+            padding: 30px; transition: all 0.2s ease;
         }
-        .runner-name { font-size: 40px; font-weight: bold; text-align: center; text-transform: uppercase; }
-        .active { background: #006600 !important; border-color: #00ff00 !important; animation: blink 1s infinite; }
-        .waiting { color: #ff4444; }
-        .active .runner-name { color: #fff; }
-        .clear-btn { 
-            margin-top: 15px; padding: 10px 20px; background: rgba(255,255,255,0.2); 
-            border: none; color: white; border-radius: 5px; cursor: pointer; font-size: 14px;
-        }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-        #master-clear { position: fixed; bottom: 20px; right: 20px; padding: 15px; background: #444; border: none; color: white; cursor: pointer; border-radius: 5px; }
+        .name-text { font-size: 38px; font-weight: 900; text-align: center; text-transform: uppercase; color: #444; }
+        
+        /* State: Runner has a person */
+        .ready { background: #052e16 !important; border-color: #22c55e !important; box-shadow: 0 0 40px rgba(34,197,94,0.2); }
+        .ready .name-text { color: #fff; animation: pulse 1.5s infinite; }
+        
+        .clear-single { margin-top: 20px; padding: 12px 24px; background: #22c55e; border: none; color: white; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 18px; }
+        
+        .controls { background: #111; padding: 15px; border-radius: 15px; display: flex; gap: 10px; }
+        .btn-danger { background: #991b1b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .empty-msg { grid-column: 1/-1; text-align: center; color: #444; font-size: 24px; margin-top: 100px; }
     </style>
 </head>
 <body>
-    <div id="sessionTitle">SESSION: [ID]</div>
-    <div class="grid" id="monitorGrid"></div>
-    <button id="master-clear" onclick="clearEntireSession()">END SESSION / WIPE ALL</button>
+
+    <div class="header">
+        <h1 style="margin:0; color:#3b82f6;">Q&A MONITOR</h1>
+        <div class="controls">
+            <button class="btn-danger" onclick="resetSession()">RESET NEW SESSION</button>
+        </div>
+    </div>
+
+    <div class="grid" id="monitorGrid">
+        <div class="empty-msg">No runners connected yet...</div>
+    </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -44,37 +55,36 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const sessionID = urlParams.get('s') || 'default';
-        document.getElementById('sessionTitle').innerText = "LIVE SESSION: " + sessionID.toUpperCase();
-
-        database.ref('sessions/' + sessionID).on('value', (snap) => {
+        database.ref('liveSession').on('value', (snap) => {
             const data = snap.val();
             const grid = document.getElementById('monitorGrid');
             grid.innerHTML = "";
 
-            if (!data) return;
+            if (!data) {
+                grid.innerHTML = '<div class="empty-msg">Waiting for runners to join...</div>';
+                return;
+            }
 
             Object.keys(data).forEach(name => {
-                const isReady = data[name].active;
+                const active = data[name].active;
                 const card = document.createElement('div');
-                card.className = "runner-card " + (isReady ? "active" : "waiting");
+                card.className = `card ${active ? 'ready' : ''}`;
                 
                 card.innerHTML = `
-                    <div class="runner-name">${name}</div>
-                    ${isReady ? `<button class="clear-btn" onclick="clearRunner('${name}')">ANSWERED</button>` : ''}
+                    <div class="name-text">${name}</div>
+                    ${active ? `<button class="clear-single" onclick="clearRunner('${name}')">MARK AS ANSWERED</button>` : ''}
                 `;
                 grid.appendChild(card);
             });
         });
 
         function clearRunner(name) {
-            database.ref('sessions/' + sessionID + '/' + name).update({ active: false });
+            database.ref('liveSession/' + name).update({ active: false });
         }
 
-        function clearEntireSession() {
-            if(confirm("Wipe all runners from this session?")) {
-                database.ref('sessions/' + sessionID).remove();
+        function resetSession() {
+            if(confirm("This will clear all names and reset the board for the next session. Continue?")) {
+                database.ref('liveSession').remove();
             }
         }
     </script>
