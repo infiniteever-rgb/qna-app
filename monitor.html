@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Speaker Monitor</title>
+    <style>
+        body { background: black; color: yellow; font-family: sans-serif; text-align: center; padding-top: 50px; }
+        .name-box { font-size: 100px; font-weight: bold; text-transform: uppercase; margin: 20px; }
+        .empty { color: #333; font-size: 30px; margin-top: 100px; }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div class="empty">WAITING FOR QUESTIONS...</div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAvCi3zJFyC-MTyoGR941HFupcUMgPlvtM",
+            authDomain: "runner-qna-webapp.firebaseapp.com",
+            databaseURL: "https://runner-qna-webapp-default-rtdb.firebaseio.com",
+            projectId: "runner-qna-webapp",
+            storageBucket: "runner-qna-webapp.appspot.com",
+            messagingSenderId: "553192423696",
+            appId: "1:553192423696:web:95785e12d122407eb46595"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Listen for changes in the database
+        database.ref('runners').on('value', (snapshot) => {
+            const data = snapshot.val();
+            const container = document.getElementById('container');
+            container.innerHTML = ""; 
+
+            let count = 0;
+            for (let id in data) {
+                if (data[id].status === true) {
+                    const div = document.createElement('div');
+                    div.className = "name-box";
+                    div.innerText = id;
+                    container.appendChild(div);
+                    count++;
+                }
+            }
+
+            if (count === 0) {
+                container.innerHTML = "<div class='empty'>NO ACTIVE QUESTIONS</div>";
+            }
+        });
+    </script>
+</body>
+</html>

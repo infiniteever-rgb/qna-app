@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Runner Portal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #222; color: white; }
+        input { padding: 15px; width: 80%; margin-bottom: 20px; font-size: 16px; border-radius: 8px; border: 1px solid #444; }
+        button { padding: 25px; width: 85%; font-size: 20px; cursor: pointer; border: none; border-radius: 15px; font-weight: bold; }
+        .btn-active { background: #ff4444; color: white; }
+        .btn-inactive { background: #44bb44; color: white; }
+    </style>
+</head>
+<body>
+    <h2>Mic Runner Input</h2>
+    <input type="text" id="runnerName" placeholder="Enter Name (e.g. Aisle 1)">
+    <br><br>
+    <button id="mainBtn" class="btn-inactive" onclick="toggleStatus()">I HAVE A QUESTION</button>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+        // YOUR SPECIFIC CONFIG WITH THE MISSING DATABASE URL ADDED
+        const firebaseConfig = {
+            apiKey: "AIzaSyAvCi3zJFyC-MTyoGR941HFupcUMgPlvtM",
+            authDomain: "runner-qna-webapp.firebaseapp.com",
+            databaseURL: "https://runner-qna-webapp-default-rtdb.firebaseio.com",
+            projectId: "runner-qna-webapp",
+            storageBucket: "runner-qna-webapp.appspot.com",
+            messagingSenderId: "553192423696",
+            appId: "1:553192423696:web:95785e12d122407eb46595"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        let isActive = false;
+
+        function toggleStatus() {
+            const name = document.getElementById('runnerName').value;
+            if (!name) return alert("Please enter your name first!");
+
+            isActive = !isActive;
+            const btn = document.getElementById('mainBtn');
+
+            // Send data to Firebase
+            database.ref('runners/' + name).set({
+                status: isActive,
+                timestamp: Date.now()
+            });
+
+            btn.innerText = isActive ? "CANCEL / DONE" : "I HAVE A QUESTION";
+            btn.className = isActive ? "btn-active" : "btn-inactive";
+        }
+    </script>
+</body>
+</html>
