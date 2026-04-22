@@ -18,26 +18,14 @@
 <body>
 
     <div id="setup" class="setup-screen">
-        <h1>Theatre Registration</h1>
+        <h1>Testimony Mics</h1>
         <input type="text" id="runnerName" placeholder="Your Name">
-        <p>Select Your Position:</p>
+        <p>Select Your Level:</p>
         <select id="zoneSelect">
-            <optgroup label="Top Row">
-                <option value="row1_left">Circle 2 - Center</option>
-                <option value="row1_right">Circle 1 - Mid</option>
-            </optgroup>
-            <optgroup label="Mid Row">
-                <option value="row2_left">Circle 2 - Left</option>
-                <option value="row2_right">Circle 2 - Right</option>
-            </optgroup>
-            <optgroup label="3rd Row">
-                <option value="row3_left">Stalls - Mid Left</option>
-                <option value="row3_right">Stalls - Mid Right</option>
-            </optgroup>
-            <optgroup label="Bottom Row">
-                <option value="row4_left">Stalls - Extreme Left</option>
-                <option value="row4_right">Stalls - Extreme Right</option>
-            </optgroup>
+            <option value="" disabled selected>-- Select Level --</option>
+            <option value="circle2">Circle 2</option>
+            <option value="circle1">Circle 1</option>
+            <option value="stalls">Stalls</option>
         </select>
         <button class="btn-join" onclick="checkAndRegister()">Join Session</button>
     </div>
@@ -45,7 +33,7 @@
     <div id="active" class="active-screen">
         <h2 id="greeting">Hi</h2>
         <div id="statusIndicator">Status: Waiting</div>
-        <button id="readyBtn" class="btn-ready" onclick="setStatus(true)">I HAVE A PERSON</button>
+        <button id="readyBtn" class="btn-ready" onclick="setStatus(true)">TESTIMONY READY</button>
         <button class="btn-cancel" onclick="setStatus(false)">CANCEL</button>
     </div>
 
@@ -66,33 +54,18 @@
         const database = firebase.database();
         
         let myName = localStorage.getItem('activeRunnerName');
-
         if (myName) { showActiveScreen(); } 
         else { document.getElementById('setup').classList.add('visible'); }
 
         async function checkAndRegister() {
             const name = document.getElementById('runnerName').value.trim();
-            const zone = document.getElementById('zoneSelect').value;
-            if (!name) return alert("Enter name!");
+            const level = document.getElementById('zoneSelect').value;
+            if (!name || !level) return alert("Please enter name and select level!");
 
-            const snapshot = await database.ref('liveSession').once('value');
-            const data = snapshot.val();
-            let isTaken = false;
-            
-            if (data) {
-                Object.values(data).forEach(r => {
-                    if (r.zone === zone) isTaken = true;
-                });
-            }
-
-            if (isTaken) {
-                alert("This position is already taken!");
-            } else {
-                myName = name;
-                localStorage.setItem('activeRunnerName', myName);
-                database.ref('liveSession/' + myName).set({ active: false, zone: zone });
-                showActiveScreen();
-            }
+            myName = name;
+            localStorage.setItem('activeRunnerName', myName);
+            database.ref('liveSession/' + myName).set({ active: false, level: level });
+            showActiveScreen();
         }
 
         function showActiveScreen() {
